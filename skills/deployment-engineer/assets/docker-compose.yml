@@ -1,0 +1,139 @@
+# =============================================================================
+# Docker Compose for Local Development
+# =============================================================================
+#
+# Services:
+# - api: FastAPI application
+# - db: PostgreSQL 15+ database
+# - mage: Mage OSS orchestrator (optional)
+#
+# Usage:
+#   docker-compose up -d
+#   docker-compose logs -f api
+#   docker-compose down
+#
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # ---------------------------------------------------------------------------
+  # FastAPI Application
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: agentic-ml-api
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=agentic_ml
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - MOJO_PATH=/app/models/model.zip
+      - DEBUG=true
+    volumes:
+      - .:/app
+      - ./models:/app/models:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - agentic-network
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL Database
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:15-alpine
+    container_name: agentic-ml-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=agentic_ml
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - agentic-network
+
+  # ---------------------------------------------------------------------------
+  # Mage OSS Orchestrator (Optional)
+  # ---------------------------------------------------------------------------
+  mage:
+    image: mageai/mageai:latest
+    container_name: agentic-ml-mage
+    ports:
+      - "6789:6789"
+    environment:
+      - USER_CODE_PATH=/home/src/default_repo
+      - POSTGRES_DBNAME=agentic_ml
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+    volumes:
+      - mage-data:/home/src
+      - ./pipelines:/home/src/default_repo/pipelines
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - agentic-network
+    profiles:
+      - orchestrator # Only starts with: docker-compose --profile orchestrator up
+
+  # ---------------------------------------------------------------------------
+  # Redis Cache (Optional)
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: agentic-ml-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - agentic-network
+    profiles:
+      - cache # Only starts with: docker-compose --profile cache up
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  agentic-network:
+    driver: bridge
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  postgres-data:
+    driver: local
+  mage-data:
+    driver: local
+  redis-data:
+    driver: local
