@@ -1,0 +1,577 @@
+{
+    "$schema": "https://agentic-ml-platform/schemas/agentic-memory-schema.json",
+    "name": "agentic_memory_architecture",
+    "version": "1.0.0",
+    "description": "Comprehensive schema for Agentic AI cognitive memory with pgvector, episodic state, model registry, and governance tables",
+    "extensions": [
+        {
+            "name": "vector",
+            "version": "0.5.0",
+            "description": "pgvector extension for similarity search"
+        },
+        {
+            "name": "pg_trgm",
+            "version": "1.6",
+            "description": "Trigram matching for text search"
+        }
+    ],
+    "schemas": [
+        {
+            "name": "agent_memory",
+            "description": "Core cognitive memory for AI agents - semantic, episodic, and procedural"
+        },
+        {
+            "name": "h2o_intelligence",
+            "description": "ML model registry and capabilities catalog"
+        },
+        {
+            "name": "audit",
+            "description": "Governance, compliance, and action logging"
+        },
+        {
+            "name": "system_control",
+            "description": "Kill-switches and global agent controls"
+        }
+    ],
+    "tables": {
+        "agent_memory.knowledge_items": {
+            "description": "Semantic/Long-term Memory - Vectorized knowledge base for RAG retrieval",
+            "columns": {
+                "item_id": {
+                    "type": "uuid",
+                    "primary_key": true,
+                    "default": "gen_random_uuid()",
+                    "description": "Unique identifier for knowledge item"
+                },
+                "content_chunk": {
+                    "type": "text",
+                    "nullable": false,
+                    "description": "Raw text content of the knowledge chunk"
+                },
+                "embedding": {
+                    "type": "vector(1536)",
+                    "nullable": true,
+                    "description": "Vector embedding from OpenAI/H2O embedding model"
+                },
+                "source_type": {
+                    "type": "varchar(50)",
+                    "nullable": true,
+                    "description": "Origin type: pdf, slack, email, api, manual"
+                },
+                "source_uri": {
+                    "type": "text",
+                    "nullable": true,
+                    "description": "URI or path to original source document"
+                },
+                "author_id": {
+                    "type": "varchar(100)",
+                    "nullable": true,
+                    "description": "Identifier of the content author/creator"
+                },
+                "creation_date": {
+                    "type": "timestamptz",
+                    "default": "now()",
+                    "description": "When the knowledge was created/ingested"
+                },
+                "attributes": {
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "description": "Flexible metadata for hybrid search filtering"
+                },
+                "ingestion_run_id": {
+                    "type": "varchar(255)",
+                    "nullable": true,
+                    "description": "Mage pipeline run ID for data lineage"
+                },
+                "is_consolidated": {
+                    "type": "boolean",
+                    "default": "false",
+                    "description": "Whether this item was consolidated from episodes"
+                },
+                "ttl_expires_at": {
+                    "type": "timestamptz",
+                    "nullable": true,
+                    "description": "Optional expiration for temporal knowledge"
+                }
+            },
+            "indexes": [
+                {
+                    "name": "idx_knowledge_embedding_hnsw",
+                    "type": "hnsw",
+                    "columns": [
+                        "embedding"
+                    ],
+                    "operator_class": "vector_cosine_ops",
+                    "parameters": {
+                        "m": 16,
+                        "ef_construction": 64
+                    },
+                    "description": "HNSW index for fast approximate nearest neighbor search"
+                },
+                {
+                    "name": "idx_knowledge_source_type",
+                    "columns": [
+                        "source_type"
+                    ],
+                    "description": "Filter by source type"
+                },
+                {
+                    "name": "idx_knowledge_creation_date",
+                    "columns": [
+                        "creation_date"
+                    ],
+                    "description": "Temporal filtering"
+                },
+                {
+                    "name": "idx_knowledge_attributes_gin",
+                    "type": "gin",
+                    "columns": [
+                        "attributes"
+                    ],
+                    "description": "GIN index for JSONB queries"
+                }
+            ]
+        },
+        "agent_memory.episodes": {
+            "description": "Episodic/Working Memory - Sequential interaction history and session state",
+            "columns": {
+                "episode_id": {
+                    "type": "uuid",
+                    "primary_key": true,
+                    "default": "gen_random_uuid()",
+                    "description": "Unique identifier for this episode"
+                },
+                "session_id": {
+                    "type": "uuid",
+                    "nullable": false,
+                    "description": "Groups interactions into a conversation session"
+                },
+                "actor_role": {
+                    "type": "varchar(20)",
+                    "nullable": false,
+                    "check": "actor_role IN ('user', 'agent', 'system', 'tool')",
+                    "description": "Who generated this episode: user, agent, system, or tool"
+                },
+                "message_content": {
+                    "type": "text",
+                    "nullable": true,
+                    "description": "The textual content of the interaction"
+                },
+                "tool_call_details": {
+                    "type": "jsonb",
+                    "nullable": true,
+                    "description": "Function name, arguments, and invocation metadata"
+                },
+                "tool_output": {
+                    "type": "jsonb",
+                    "nullable": true,
+                    "description": "Raw result returned from tool execution"
+                },
+                "reasoning_trace": {
+                    "type": "text",
+                    "nullable": true,
+                    "description": "Agent's chain-of-thought reasoning (if available)"
+                },
+                "sequence_number": {
+                    "type": "integer",
+                    "nullable": false,
+                    "description": "Order within the session"
+                },
+                "created_at": {
+                    "type": "timestamptz",
+                    "default": "now()",
+                    "description": "When this episode was recorded"
+                },
+                "is_consolidated": {
+                    "type": "boolean",
+                    "default": "false",
+                    "description": "Whether this episode has been summarized to knowledge"
+                },
+                "sentiment_score": {
+                    "type": "float",
+                    "nullable": true,
+                    "description": "Sentiment analysis score for outcome tracking"
+                }
+            },
+            "indexes": [
+                {
+                    "name": "idx_episodes_session_sequence",
+                    "columns": [
+                        "session_id",
+                        "sequence_number"
+                    ],
+                    "order": "DESC",
+                    "description": "Fast retrieval of current session context"
+                },
+                {
+                    "name": "idx_episodes_created_at",
+                    "columns": [
+                        "created_at"
+                    ],
+                    "description": "Temporal queries for consolidation jobs"
+                },
+                {
+                    "name": "idx_episodes_not_consolidated",
+                    "columns": [
+                        "is_consolidated"
+                    ],
+                    "where": "is_consolidated = false",
+                    "description": "Partial index for consolidation queries"
+                }
+            ]
+        },
+        "agent_memory.tool_logs": {
+            "description": "Procedural Memory - Tool usage patterns and success metrics for learning",
+            "columns": {
+                "log_id": {
+                    "type": "uuid",
+                    "primary_key": true,
+                    "default": "gen_random_uuid()"
+                },
+                "tool_name": {
+                    "type": "varchar(100)",
+                    "nullable": false,
+                    "description": "Name of the tool/function invoked"
+                },
+                "tool_version": {
+                    "type": "varchar(50)",
+                    "nullable": true
+                },
+                "input_signature": {
+                    "type": "jsonb",
+                    "nullable": false,
+                    "description": "Arguments passed to the tool"
+                },
+                "output_summary": {
+                    "type": "text",
+                    "nullable": true,
+                    "description": "Summarized result of tool execution"
+                },
+                "execution_time_ms": {
+                    "type": "integer",
+                    "nullable": true,
+                    "description": "Duration of tool execution in milliseconds"
+                },
+                "success": {
+                    "type": "boolean",
+                    "nullable": false,
+                    "description": "Whether the tool completed successfully"
+                },
+                "error_message": {
+                    "type": "text",
+                    "nullable": true
+                },
+                "context_embedding": {
+                    "type": "vector(1536)",
+                    "nullable": true,
+                    "description": "Embedding of the context when tool was called"
+                },
+                "created_at": {
+                    "type": "timestamptz",
+                    "default": "now()"
+                }
+            },
+            "indexes": [
+                {
+                    "name": "idx_tool_logs_name_success",
+                    "columns": [
+                        "tool_name",
+                        "success"
+                    ],
+                    "description": "Analyze tool success rates"
+                },
+                {
+                    "name": "idx_tool_logs_context_hnsw",
+                    "type": "hnsw",
+                    "columns": [
+                        "context_embedding"
+                    ],
+                    "operator_class": "vector_cosine_ops",
+                    "parameters": {
+                        "m": 16,
+                        "ef_construction": 64
+                    },
+                    "description": "Find similar contexts for tool selection"
+                }
+            ]
+        },
+        "h2o_intelligence.model_registry": {
+            "description": "ML Model Catalog - Registry of H2O models available to agents",
+            "columns": {
+                "model_id": {
+                    "type": "varchar(255)",
+                    "primary_key": true,
+                    "description": "H2O Model ID (matches cluster model name)"
+                },
+                "model_name": {
+                    "type": "varchar(255)",
+                    "nullable": false,
+                    "description": "Human-readable model name"
+                },
+                "algorithm": {
+                    "type": "varchar(50)",
+                    "nullable": false,
+                    "description": "Algorithm type: GBM, DRF, DeepLearning, XGBoost, GLM"
+                },
+                "problem_type": {
+                    "type": "varchar(30)",
+                    "check": "problem_type IN ('classification', 'regression', 'clustering', 'anomaly')",
+                    "description": "Type of ML problem this model solves"
+                },
+                "capabilities_description": {
+                    "type": "text",
+                    "nullable": false,
+                    "description": "Natural language description for agent routing"
+                },
+                "required_features": {
+                    "type": "jsonb",
+                    "nullable": false,
+                    "description": "List of column names and types the model expects"
+                },
+                "target_column": {
+                    "type": "varchar(100)",
+                    "nullable": true,
+                    "description": "Name of the prediction target column"
+                },
+                "validation_auc": {
+                    "type": "float",
+                    "nullable": true
+                },
+                "validation_rmse": {
+                    "type": "float",
+                    "nullable": true
+                },
+                "validation_logloss": {
+                    "type": "float",
+                    "nullable": true
+                },
+                "training_dataset": {
+                    "type": "varchar(255)",
+                    "nullable": true,
+                    "description": "Reference to training dataset for lineage"
+                },
+                "mojo_path": {
+                    "type": "text",
+                    "nullable": true,
+                    "description": "Path to MOJO binary for deployment"
+                },
+                "is_active": {
+                    "type": "boolean",
+                    "default": "false",
+                    "description": "Whether this model is currently deployed"
+                },
+                "version": {
+                    "type": "varchar(20)",
+                    "nullable": false,
+                    "default": "'1.0.0'"
+                },
+                "deployed_at": {
+                    "type": "timestamptz",
+                    "nullable": true
+                },
+                "created_at": {
+                    "type": "timestamptz",
+                    "default": "now()"
+                },
+                "created_by": {
+                    "type": "varchar(100)",
+                    "nullable": true
+                }
+            },
+            "indexes": [
+                {
+                    "name": "idx_model_registry_active",
+                    "columns": [
+                        "is_active"
+                    ],
+                    "where": "is_active = true"
+                },
+                {
+                    "name": "idx_model_registry_algorithm",
+                    "columns": [
+                        "algorithm"
+                    ]
+                },
+                {
+                    "name": "idx_model_registry_problem_type",
+                    "columns": [
+                        "problem_type"
+                    ]
+                }
+            ]
+        },
+        "h2o_intelligence.model_metrics_history": {
+            "description": "Historical performance tracking for model drift detection",
+            "columns": {
+                "metric_id": {
+                    "type": "uuid",
+                    "primary_key": true,
+                    "default": "gen_random_uuid()"
+                },
+                "model_id": {
+                    "type": "varchar(255)",
+                    "nullable": false,
+                    "foreign_key": {
+                        "references": "h2o_intelligence.model_registry",
+                        "column": "model_id",
+                        "on_delete": "CASCADE"
+                    }
+                },
+                "metric_name": {
+                    "type": "varchar(50)",
+                    "nullable": false
+                },
+                "metric_value": {
+                    "type": "float",
+                    "nullable": false
+                },
+                "dataset_name": {
+                    "type": "varchar(255)",
+                    "nullable": true
+                },
+                "recorded_at": {
+                    "type": "timestamptz",
+                    "default": "now()"
+                }
+            },
+            "indexes": [
+                {
+                    "name": "idx_metrics_model_time",
+                    "columns": [
+                        "model_id",
+                        "recorded_at"
+                    ]
+                }
+            ]
+        },
+        "audit.agent_actions": {
+            "description": "Immutable audit log for compliance and governance",
+            "columns": {
+                "action_id": {
+                    "type": "uuid",
+                    "primary_key": true,
+                    "default": "gen_random_uuid()"
+                },
+                "session_id": {
+                    "type": "uuid",
+                    "nullable": true
+                },
+                "agent_id": {
+                    "type": "varchar(100)",
+                    "nullable": false,
+                    "description": "Identifier of the agent performing the action"
+                },
+                "action_type": {
+                    "type": "varchar(50)",
+                    "nullable": false,
+                    "description": "Type: query, tool_call, model_inference, data_write"
+                },
+                "action_details": {
+                    "type": "jsonb",
+                    "nullable": false,
+                    "description": "Full details of the action performed"
+                },
+                "resources_accessed": {
+                    "type": "jsonb",
+                    "nullable": true,
+                    "description": "Tables, APIs, files accessed"
+                },
+                "outcome": {
+                    "type": "varchar(20)",
+                    "check": "outcome IN ('success', 'failure', 'blocked', 'timeout')"
+                },
+                "risk_score": {
+                    "type": "float",
+                    "nullable": true,
+                    "description": "Computed risk score for the action"
+                },
+                "created_at": {
+                    "type": "timestamptz",
+                    "default": "now()"
+                },
+                "ip_address": {
+                    "type": "inet",
+                    "nullable": true
+                }
+            },
+            "indexes": [
+                {
+                    "name": "idx_audit_agent_time",
+                    "columns": [
+                        "agent_id",
+                        "created_at"
+                    ]
+                },
+                {
+                    "name": "idx_audit_action_type",
+                    "columns": [
+                        "action_type"
+                    ]
+                },
+                {
+                    "name": "idx_audit_session",
+                    "columns": [
+                        "session_id"
+                    ]
+                }
+            ],
+            "options": {
+                "comment": "IMMUTABLE: This table should have INSERT-only policies"
+            }
+        },
+        "system_control.global_settings": {
+            "description": "Global control flags including kill-switch mechanism",
+            "columns": {
+                "setting_key": {
+                    "type": "varchar(100)",
+                    "primary_key": true
+                },
+                "setting_value": {
+                    "type": "jsonb",
+                    "nullable": false
+                },
+                "description": {
+                    "type": "text",
+                    "nullable": true
+                },
+                "updated_at": {
+                    "type": "timestamptz",
+                    "default": "now()"
+                },
+                "updated_by": {
+                    "type": "varchar(100)",
+                    "nullable": true
+                }
+            },
+            "seed_data": [
+                {
+                    "setting_key": "global_halt",
+                    "setting_value": {
+                        "enabled": false,
+                        "reason": null
+                    },
+                    "description": "Master kill-switch: stops all agent operations when enabled"
+                },
+                {
+                    "setting_key": "rate_limits",
+                    "setting_value": {
+                        "max_queries_per_minute": 100,
+                        "max_tool_calls_per_session": 50,
+                        "max_model_inferences_per_hour": 1000
+                    },
+                    "description": "Rate limiting configuration for agent operations"
+                },
+                {
+                    "setting_key": "allowed_models",
+                    "setting_value": {
+                        "models": [
+                            "*"
+                        ],
+                        "enforce": false
+                    },
+                    "description": "Whitelist of models agents can use"
+                }
+            ]
+        }
+    }
+}
