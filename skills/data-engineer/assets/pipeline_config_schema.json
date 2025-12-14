@@ -1,0 +1,586 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://agentic-ml-platform/schemas/pipeline-config.json",
+    "title": "Pipeline Configuration Schema",
+    "description": "JSON Schema for validating Agentic ML Platform pipeline configurations",
+    "type": "object",
+    "required": [
+        "pipeline_id",
+        "name",
+        "source",
+        "sink",
+        "schedule"
+    ],
+    "properties": {
+        "pipeline_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{2,63}$",
+            "description": "Unique identifier for the pipeline (lowercase, alphanumeric with underscores/hyphens)"
+        },
+        "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Human-readable pipeline name"
+        },
+        "description": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Detailed description of the pipeline's purpose"
+        },
+        "owner": {
+            "type": "string",
+            "format": "email",
+            "description": "Email of the pipeline owner"
+        },
+        "tags": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9-]+$"
+            },
+            "uniqueItems": true,
+            "description": "Tags for categorization and filtering"
+        },
+        "source": {
+            "$ref": "#/definitions/source"
+        },
+        "sink": {
+            "$ref": "#/definitions/sink"
+        },
+        "transformations": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/transformation"
+            },
+            "description": "List of transformations to apply"
+        },
+        "schedule": {
+            "$ref": "#/definitions/schedule"
+        },
+        "quality_checks": {
+            "$ref": "#/definitions/quality_checks"
+        },
+        "alerting": {
+            "$ref": "#/definitions/alerting"
+        },
+        "resources": {
+            "$ref": "#/definitions/resources"
+        },
+        "metadata": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Additional metadata for the pipeline"
+        }
+    },
+    "definitions": {
+        "source": {
+            "type": "object",
+            "required": [
+                "type",
+                "connection"
+            ],
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "postgres",
+                        "mysql",
+                        "api",
+                        "s3",
+                        "gcs",
+                        "kafka",
+                        "file"
+                    ],
+                    "description": "Source system type"
+                },
+                "connection": {
+                    "type": "object",
+                    "properties": {
+                        "connection_id": {
+                            "type": "string",
+                            "description": "Reference to connection in secrets manager"
+                        },
+                        "host": {
+                            "type": "string"
+                        },
+                        "port": {
+                            "type": "integer"
+                        },
+                        "database": {
+                            "type": "string"
+                        },
+                        "schema": {
+                            "type": "string"
+                        },
+                        "table": {
+                            "type": "string"
+                        },
+                        "query": {
+                            "type": "string"
+                        },
+                        "url": {
+                            "type": "string",
+                            "format": "uri"
+                        },
+                        "bucket": {
+                            "type": "string"
+                        },
+                        "path": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "extraction": {
+                    "type": "object",
+                    "properties": {
+                        "mode": {
+                            "type": "string",
+                            "enum": [
+                                "full",
+                                "incremental",
+                                "cdc"
+                            ],
+                            "default": "incremental"
+                        },
+                        "watermark_column": {
+                            "type": "string",
+                            "description": "Column for incremental extraction"
+                        },
+                        "batch_size": {
+                            "type": "integer",
+                            "minimum": 100,
+                            "maximum": 1000000,
+                            "default": 10000
+                        },
+                        "parallelism": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 32,
+                            "default": 4
+                        }
+                    }
+                },
+                "schema_evolution": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean",
+                            "default": true
+                        },
+                        "strategy": {
+                            "type": "string",
+                            "enum": [
+                                "fail",
+                                "ignore",
+                                "append_new_columns",
+                                "sync_all"
+                            ],
+                            "default": "append_new_columns"
+                        }
+                    }
+                }
+            }
+        },
+        "sink": {
+            "type": "object",
+            "required": [
+                "type",
+                "connection"
+            ],
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "postgres",
+                        "bigquery",
+                        "snowflake",
+                        "redshift",
+                        "s3",
+                        "feature_store"
+                    ],
+                    "description": "Destination system type"
+                },
+                "connection": {
+                    "type": "object",
+                    "properties": {
+                        "connection_id": {
+                            "type": "string"
+                        },
+                        "host": {
+                            "type": "string"
+                        },
+                        "port": {
+                            "type": "integer"
+                        },
+                        "database": {
+                            "type": "string"
+                        },
+                        "schema": {
+                            "type": "string"
+                        },
+                        "table": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "write_mode": {
+                    "type": "string",
+                    "enum": [
+                        "append",
+                        "overwrite",
+                        "upsert",
+                        "merge"
+                    ],
+                    "default": "upsert"
+                },
+                "upsert_keys": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Columns to use for upsert matching"
+                },
+                "partition_columns": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Columns for table partitioning"
+                }
+            }
+        },
+        "transformation": {
+            "type": "object",
+            "required": [
+                "name",
+                "type"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_]*$"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "sql",
+                        "python",
+                        "dbt",
+                        "h2o_profile",
+                        "h2o_impute",
+                        "h2o_anomaly"
+                    ]
+                },
+                "config": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "description": "Transformation-specific configuration"
+                },
+                "order": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Execution order (lower runs first)"
+                },
+                "enabled": {
+                    "type": "boolean",
+                    "default": true
+                }
+            }
+        },
+        "schedule": {
+            "type": "object",
+            "required": [
+                "type"
+            ],
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "cron",
+                        "interval",
+                        "event",
+                        "manual"
+                    ]
+                },
+                "cron_expression": {
+                    "type": "string",
+                    "pattern": "^(@(annually|yearly|monthly|weekly|daily|hourly)|((\\*|\\?|\\d+((\\/|\\-|\\,)\\d+)?|(\\d+|\\*)\\/(\\d+))(\\s|$)){5,7})$",
+                    "description": "Cron expression for scheduling"
+                },
+                "interval_minutes": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "timezone": {
+                    "type": "string",
+                    "default": "UTC"
+                },
+                "start_date": {
+                    "type": "string",
+                    "format": "date"
+                },
+                "end_date": {
+                    "type": "string",
+                    "format": "date"
+                },
+                "catchup": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "max_active_runs": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 1
+                }
+            },
+            "if": {
+                "properties": {
+                    "type": {
+                        "const": "cron"
+                    }
+                }
+            },
+            "then": {
+                "required": [
+                    "cron_expression"
+                ]
+            }
+        },
+        "quality_checks": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "checks": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "name",
+                            "type"
+                        ],
+                        "properties": {
+                            "name": {
+                                "type": "string"
+                            },
+                            "type": {
+                                "type": "string",
+                                "enum": [
+                                    "not_null",
+                                    "unique",
+                                    "row_count",
+                                    "freshness",
+                                    "schema_match",
+                                    "custom_sql",
+                                    "anomaly_score"
+                                ]
+                            },
+                            "column": {
+                                "type": "string"
+                            },
+                            "threshold": {
+                                "type": "number"
+                            },
+                            "severity": {
+                                "type": "string",
+                                "enum": [
+                                    "info",
+                                    "warning",
+                                    "error",
+                                    "critical"
+                                ],
+                                "default": "error"
+                            },
+                            "on_failure": {
+                                "type": "string",
+                                "enum": [
+                                    "alert",
+                                    "quarantine",
+                                    "fail",
+                                    "skip"
+                                ],
+                                "default": "alert"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "alerting": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "channels": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "type"
+                        ],
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "enum": [
+                                    "email",
+                                    "slack",
+                                    "pagerduty",
+                                    "webhook"
+                                ]
+                            },
+                            "config": {
+                                "type": "object",
+                                "additionalProperties": true
+                            },
+                            "events": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "enum": [
+                                        "start",
+                                        "success",
+                                        "failure",
+                                        "sla_miss",
+                                        "quality_issue"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                "sla": {
+                    "type": "object",
+                    "properties": {
+                        "max_duration_minutes": {
+                            "type": "integer"
+                        },
+                        "expected_completion_time": {
+                            "type": "string",
+                            "format": "time"
+                        }
+                    }
+                }
+            }
+        },
+        "resources": {
+            "type": "object",
+            "properties": {
+                "executor": {
+                    "type": "string",
+                    "enum": [
+                        "local",
+                        "kubernetes",
+                        "celery"
+                    ],
+                    "default": "local"
+                },
+                "cpu_limit": {
+                    "type": "string",
+                    "pattern": "^\\d+(\\.\\d+)?$",
+                    "description": "CPU cores limit"
+                },
+                "memory_limit": {
+                    "type": "string",
+                    "pattern": "^\\d+(Ki|Mi|Gi)$",
+                    "description": "Memory limit (e.g., '2Gi')"
+                },
+                "timeout_minutes": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 120
+                },
+                "retries": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "default": 3
+                },
+                "retry_delay_minutes": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 5
+                }
+            }
+        }
+    },
+    "examples": [
+        {
+            "pipeline_id": "user-events-to-features",
+            "name": "User Events to Feature Store",
+            "description": "Ingests user events and computes ML features",
+            "owner": "data-team@example.com",
+            "tags": [
+                "ml-features",
+                "daily"
+            ],
+            "source": {
+                "type": "postgres",
+                "connection": {
+                    "connection_id": "prod_postgres",
+                    "schema": "raw_data_store",
+                    "table": "raw_events"
+                },
+                "extraction": {
+                    "mode": "incremental",
+                    "watermark_column": "ingested_at",
+                    "batch_size": 50000
+                }
+            },
+            "sink": {
+                "type": "feature_store",
+                "connection": {
+                    "connection_id": "prod_postgres",
+                    "schema": "feature_store",
+                    "table": "features"
+                },
+                "write_mode": "upsert",
+                "upsert_keys": [
+                    "entity_id",
+                    "feature_set"
+                ]
+            },
+            "transformations": [
+                {
+                    "name": "profile_data",
+                    "type": "h2o_profile",
+                    "order": 1
+                },
+                {
+                    "name": "detect_anomalies",
+                    "type": "h2o_anomaly",
+                    "order": 2
+                },
+                {
+                    "name": "compute_features",
+                    "type": "dbt",
+                    "order": 3
+                }
+            ],
+            "schedule": {
+                "type": "cron",
+                "cron_expression": "0 2 * * *",
+                "timezone": "UTC",
+                "catchup": false
+            },
+            "quality_checks": {
+                "enabled": true,
+                "checks": [
+                    {
+                        "name": "no_nulls_entity_id",
+                        "type": "not_null",
+                        "column": "entity_id"
+                    },
+                    {
+                        "name": "freshness",
+                        "type": "freshness",
+                        "threshold": 24
+                    }
+                ]
+            }
+        }
+    ]
+}

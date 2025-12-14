@@ -1,0 +1,134 @@
+{
+    "name": "agentic_ml_pipeline",
+    "description": "Agentic Data Engineering Pipeline - H2O AutoML with Mage orchestration",
+    "version": "1.0.0",
+    "blocks": [
+        {
+            "uuid": "sensor_s3_file",
+            "name": "Wait for Source Data",
+            "type": "sensor",
+            "file_path": "sensors/s3_file_sensor.py",
+            "configuration": {
+                "s3_bucket": "{{ env.AWS_S3_BUCKET }}",
+                "s3_key_pattern": "raw_data/{year}/{month:02d}/{day:02d}/events.parquet",
+                "timeout_seconds": 3600
+            }
+        },
+        {
+            "uuid": "loader_postgres",
+            "name": "Load from PostgreSQL",
+            "type": "data_loader",
+            "file_path": "data_loaders/load_postgres.py",
+            "upstream_blocks": [
+                "sensor_s3_file"
+            ],
+            "configuration": {
+                "table_name": "raw_events",
+                "schema_name": "raw_data_store",
+                "extraction_mode": "incremental"
+            }
+        },
+        {
+            "uuid": "transformer_clean",
+            "name": "Clean for H2O",
+            "type": "transformer",
+            "file_path": "transformers/clean_for_h2o.py",
+            "upstream_blocks": [
+                "loader_postgres"
+            ],
+            "configuration": {
+                "null_strategy": "median",
+                "null_threshold": 0.5
+            }
+        },
+        {
+            "uuid": "quality_gate",
+            "name": "Data Quality Gate",
+            "type": "transformer",
+            "file_path": "conditionals/quality_gate.py",
+            "upstream_blocks": [
+                "transformer_clean"
+            ],
+            "configuration": {
+                "quality_threshold": 0.95,
+                "required_columns": [
+                    "id",
+                    "entity_id"
+                ]
+            }
+        },
+        {
+            "uuid": "h2o_connect",
+            "name": "Connect to H2O",
+            "type": "custom",
+            "file_path": "custom/h2o_connect.py",
+            "upstream_blocks": [
+                "quality_gate"
+            ],
+            "configuration": {
+                "h2o_url": "{{ env.H2O_URL }}"
+            }
+        },
+        {
+            "uuid": "h2o_automl",
+            "name": "Train AutoML Model",
+            "type": "custom",
+            "file_path": "custom/h2o_automl.py",
+            "upstream_blocks": [
+                "h2o_connect"
+            ],
+            "configuration": {
+                "target_column": "target",
+                "max_runtime_secs": 300,
+                "max_models": 20,
+                "export_path": "/data_lake/models"
+            }
+        },
+        {
+            "uuid": "exporter_predictions",
+            "name": "Export Predictions",
+            "type": "data_exporter",
+            "file_path": "data_exporters/export_predictions.py",
+            "upstream_blocks": [
+                "h2o_automl"
+            ],
+            "configuration": {
+                "target_table": "predictions",
+                "target_schema": "serving"
+            }
+        },
+        {
+            "uuid": "exporter_mojo",
+            "name": "Upload MOJO to S3",
+            "type": "data_exporter",
+            "file_path": "data_exporters/export_mojo_s3.py",
+            "upstream_blocks": [
+                "h2o_automl"
+            ],
+            "configuration": {
+                "s3_prefix": "models/mojo"
+            }
+        }
+    ],
+    "pipeline_config": {
+        "type": "python",
+        "retry_config": {
+            "retries": 3,
+            "delay": 60,
+            "max_delay": 300
+        },
+        "timeout_seconds": 7200,
+        "variables": {
+            "execution_date": "{{ execution_date }}"
+        }
+    },
+    "schedule": {
+        "cron": "0 2 * * *",
+        "timezone": "UTC",
+        "start_date": "2024-01-01"
+    },
+    "hooks": {
+        "on_success": "custom/global_hooks.py:on_pipeline_success",
+        "on_failure": "custom/global_hooks.py:on_pipeline_failure"
+    }
+}
