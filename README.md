@@ -6,15 +6,17 @@ A multi-agent development system using Anthropic's Agent Skills architecture for
 
 ```
 agent-scaffolding/
-├── skills/                         # Agent skill packages (12 skills)
+├── skills/                         # Agent skill packages (13 skills)
 │   ├── architectural-planner/      # Meta: Plan decomposition, 4+1 views
+│   ├── backend-architect/          # Async inference, circuit breakers, GraphQL
 │   ├── code-reviewer/              # Plan alignment, async/schema analysis
 │   ├── data-engineer/              # ETL/ELT with Mage OSS
-│   ├── database-optimizer/         # NEW: JSONB/GIN tuning, WAL orchestration
+│   ├── database-optimizer/         # JSONB/GIN tuning, WAL orchestration
 │   ├── db-architect/               # PostgreSQL schema design
 │   ├── deployment-engineer/        # Docker containerization
 │   ├── fastapi-pro/                # Async API development
 │   ├── implementation-worker/      # Meta: Task execution
+│   ├── lead-engineer-orchestrator/ # Dialectical reasoning, orchestration
 │   ├── ml-engineer/                # H2O AutoML + MOJO
 │   ├── qa/                         # Testing, concurrency, SLO
 │   └── security-auditor/           # IAM, API hardening, CVE scanning
@@ -27,6 +29,7 @@ agent-scaffolding/
 | Agent | Layer | Specialization |
 |-------|-------|----------------|
 | **Architectural Planner** | Meta | Plan decomposition, 4+1 architectural views, JTBD framework |
+| **Backend Architect** | Serving | Event loop protection, circuit breakers, split memory, GraphQL |
 | **Code Reviewer** | Meta | Plan alignment, async blocking detection, schema drift analysis |
 | **Data Engineer** | Orchestration | Mage OSS pipelines, ETL/ELT, dynamic blocks |
 | **Database Architect** | Persistence | PostgreSQL 15+, JSONB/GIN, partitioning, feature store |
@@ -34,6 +37,7 @@ agent-scaffolding/
 | **Deployment Engineer** | Infrastructure | Docker multi-stage, K8s manifests, security hardening |
 | **FastAPI Pro** | Serving | Async APIs, Pydantic, asyncpg, circuit breaker |
 | **Implementation Worker** | Meta | Polymorphic task execution, TDD compliance |
+| **Lead Engineer Orchestrator** | Meta | Dialectical reasoning, 4+1 View enforcement, architectural governance |
 | **ML Engineer** | ML | H2O AutoML, MOJO artifacts, model registry |
 | **QA** | Testing | Unit/integration/load testing, concurrency, SLO gating |
 | **Security Auditor** | Security | OAuth2/OIDC, rate limiting, CVE scanning, secrets audit |
