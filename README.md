@@ -6,15 +6,15 @@ A multi-agent development system using Anthropic's Agent Skills architecture for
 
 ```
 agent-scaffolding/
-├── skills/                         # Agent skill packages (11 skills)
+├── skills/                         # Agent skill packages (12 skills)
 │   ├── architectural-planner/      # Meta: Plan decomposition, 4+1 views
 │   ├── code-reviewer/              # Plan alignment, async/schema analysis
 │   ├── data-engineer/              # ETL/ELT with Mage OSS
+│   ├── database-optimizer/         # NEW: JSONB/GIN tuning, WAL orchestration
 │   ├── db-architect/               # PostgreSQL schema design
 │   ├── deployment-engineer/        # Docker containerization
 │   ├── fastapi-pro/                # Async API development
 │   ├── implementation-worker/      # Meta: Task execution
-│   ├── lead-engineer-orchestrator/ # NEW: Dialectical reasoning, orchestration
 │   ├── ml-engineer/                # H2O AutoML + MOJO
 │   ├── qa/                         # Testing, concurrency, SLO
 │   └── security-auditor/           # IAM, API hardening, CVE scanning
@@ -30,10 +30,10 @@ agent-scaffolding/
 | **Code Reviewer** | Meta | Plan alignment, async blocking detection, schema drift analysis |
 | **Data Engineer** | Orchestration | Mage OSS pipelines, ETL/ELT, dynamic blocks |
 | **Database Architect** | Persistence | PostgreSQL 15+, JSONB/GIN, partitioning, feature store |
+| **Database Optimizer** | Persistence | JSONB key tuning, GIN health, WAL orchestration, query plans |
 | **Deployment Engineer** | Infrastructure | Docker multi-stage, K8s manifests, security hardening |
 | **FastAPI Pro** | Serving | Async APIs, Pydantic, asyncpg, circuit breaker |
 | **Implementation Worker** | Meta | Polymorphic task execution, TDD compliance |
-| **Lead Engineer Orchestrator** | Meta | Dialectical reasoning, 4+1 View enforcement, architectural governance |
 | **ML Engineer** | ML | H2O AutoML, MOJO artifacts, model registry |
 | **QA** | Testing | Unit/integration/load testing, concurrency, SLO gating |
 | **Security Auditor** | Security | OAuth2/OIDC, rate limiting, CVE scanning, secrets audit |
@@ -87,12 +87,6 @@ python agent-scaffolding/skills/security-auditor/scripts/scan_api_security.py --
 
 # Security - Check for exposed secrets
 python agent-scaffolding/skills/security-auditor/scripts/check_secrets_exposure.py --source-dir ./
-
-# Lead Engineer - Dialectical reasoning gate
-python agent-scaffolding/skills/lead-engineer-orchestrator/scripts/dialectical_reasoning_gate.py --pr-description ./pr.txt
-
-# Lead Engineer - Check memory allocation
-python agent-scaffolding/skills/lead-engineer-orchestrator/scripts/check_memory_allocation.py --compose-file ./docker-compose.yml
 ```
 
 ### 2. Use Templates
@@ -132,11 +126,6 @@ agent-scaffolding/skills/qa/assets/load_tests/
 # Security
 agent-scaffolding/skills/security-auditor/assets/templates/security_audit_report.md
 agent-scaffolding/skills/security-auditor/assets/checklists/
-
-# Lead Engineer Orchestrator
-agent-scaffolding/skills/lead-engineer-orchestrator/assets/templates/orchestrator_report.md
-agent-scaffolding/skills/lead-engineer-orchestrator/assets/checklists/
-agent-scaffolding/skills/lead-engineer-orchestrator/references/
 ```
 
 ## Skill Structure
