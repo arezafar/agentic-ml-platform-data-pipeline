@@ -6,18 +6,23 @@ A multi-agent development system using Anthropic's Agent Skills architecture for
 
 ```
 agent-scaffolding/
-├── skills/                         # Agent skill packages (13 skills)
+├── skills/                         # Agent skill packages (18 skills)
 │   ├── architectural-planner/      # Meta: Plan decomposition, 4+1 views
 │   ├── backend-architect/          # Async inference, circuit breakers, GraphQL
+│   ├── cloud-architect/            # IaC, FinOps, autonomous infrastructure
 │   ├── code-reviewer/              # Plan alignment, async/schema analysis
 │   ├── data-engineer/              # ETL/ELT with Mage OSS
+│   ├── data-scientist/             # Statistical analysis, A/B testing, uplift
 │   ├── database-optimizer/         # JSONB/GIN tuning, WAL orchestration
 │   ├── db-architect/               # PostgreSQL schema design
 │   ├── deployment-engineer/        # Docker containerization
 │   ├── fastapi-pro/                # Async API development
 │   ├── implementation-worker/      # Meta: Task execution
+│   ├── lead-engineer/              # Architectural sovereignty, MLOps
 │   ├── lead-engineer-orchestrator/ # Dialectical reasoning, orchestration
+│   ├── mcp-manager/                # MCP context isolation, prompt injection
 │   ├── ml-engineer/                # H2O AutoML + MOJO
+│   ├── ml-optimizer/               # Inference latency, cache coherence
 │   ├── qa/                         # Testing, concurrency, SLO
 │   └── security-auditor/           # IAM, API hardening, CVE scanning
 ├── platform/                       # Platform layer configs
@@ -30,15 +35,20 @@ agent-scaffolding/
 |-------|-------|----------------|
 | **Architectural Planner** | Meta | Plan decomposition, 4+1 architectural views, JTBD framework |
 | **Backend Architect** | Serving | Event loop protection, circuit breakers, split memory, GraphQL |
+| **Cloud Architect** | Infrastructure | Terraform, FinOps, policy-as-code, drift detection |
 | **Code Reviewer** | Meta | Plan alignment, async blocking detection, schema drift analysis |
 | **Data Engineer** | Orchestration | Mage OSS pipelines, ETL/ELT, dynamic blocks |
+| **Data Scientist** | Analytics | Statistical analysis, A/B testing, uplift modeling, feature selection |
 | **Database Architect** | Persistence | PostgreSQL 15+, JSONB/GIN, partitioning, feature store |
 | **Database Optimizer** | Persistence | JSONB key tuning, GIN health, WAL orchestration, query plans |
 | **Deployment Engineer** | Infrastructure | Docker multi-stage, K8s manifests, security hardening |
 | **FastAPI Pro** | Serving | Async APIs, Pydantic, asyncpg, circuit breaker |
 | **Implementation Worker** | Meta | Polymorphic task execution, TDD compliance |
-| **Lead Engineer Orchestrator** | Meta | Dialectical reasoning, 4+1 View enforcement, architectural governance |
+| **Lead Engineer** | Meta | Architectural sovereignty, MLOps platform integration |
+| **Lead Engineer Orchestrator** | Meta | Dialectical reasoning, 4+1 View enforcement |
+| **MCP Manager** | Infrastructure | MCP context isolation, prompt injection defense |
 | **ML Engineer** | ML | H2O AutoML, MOJO artifacts, model registry |
+| **ML Optimizer** | ML | Inference latency, cache coherence, memory optimization |
 | **QA** | Testing | Unit/integration/load testing, concurrency, SLO gating |
 | **Security Auditor** | Security | OAuth2/OIDC, rate limiting, CVE scanning, secrets audit |
 
