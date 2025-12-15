@@ -6,10 +6,11 @@ A multi-agent development system using Anthropic's Agent Skills architecture for
 
 ```
 agent-scaffolding/
-├── skills/                         # Agent skill packages (10 skills)
+├── skills/                         # Agent skill packages (12 skills)
 │   ├── architectural-planner/      # Meta: Plan decomposition, 4+1 views
 │   ├── code-reviewer/              # Plan alignment, async/schema analysis
 │   ├── data-engineer/              # ETL/ELT with Mage OSS
+│   ├── database-optimizer/         # NEW: JSONB/GIN tuning, WAL orchestration
 │   ├── db-architect/               # PostgreSQL schema design
 │   ├── deployment-engineer/        # Docker containerization
 │   ├── fastapi-pro/                # Async API development
@@ -29,6 +30,7 @@ agent-scaffolding/
 | **Code Reviewer** | Meta | Plan alignment, async blocking detection, schema drift analysis |
 | **Data Engineer** | Orchestration | Mage OSS pipelines, ETL/ELT, dynamic blocks |
 | **Database Architect** | Persistence | PostgreSQL 15+, JSONB/GIN, partitioning, feature store |
+| **Database Optimizer** | Persistence | JSONB key tuning, GIN health, WAL orchestration, query plans |
 | **Deployment Engineer** | Infrastructure | Docker multi-stage, K8s manifests, security hardening |
 | **FastAPI Pro** | Serving | Async APIs, Pydantic, asyncpg, circuit breaker |
 | **Implementation Worker** | Meta | Polymorphic task execution, TDD compliance |
