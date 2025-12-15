@@ -6,8 +6,9 @@ A multi-agent development system using Anthropic's Agent Skills architecture for
 
 ```
 agent-scaffolding/
-├── skills/                         # Agent skill packages (10 skills)
+├── skills/                         # Agent skill packages (11 skills)
 │   ├── architectural-planner/      # Meta: Plan decomposition, 4+1 views
+│   ├── backend-architect/          # NEW: Async inference, circuit breakers
 │   ├── code-reviewer/              # Plan alignment, async/schema analysis
 │   ├── data-engineer/              # ETL/ELT with Mage OSS
 │   ├── db-architect/               # PostgreSQL schema design
@@ -26,6 +27,7 @@ agent-scaffolding/
 | Agent | Layer | Specialization |
 |-------|-------|----------------|
 | **Architectural Planner** | Meta | Plan decomposition, 4+1 architectural views, JTBD framework |
+| **Backend Architect** | Serving | Event loop protection, circuit breakers, split memory, GraphQL |
 | **Code Reviewer** | Meta | Plan alignment, async blocking detection, schema drift analysis |
 | **Data Engineer** | Orchestration | Mage OSS pipelines, ETL/ELT, dynamic blocks |
 | **Database Architect** | Persistence | PostgreSQL 15+, JSONB/GIN, partitioning, feature store |
