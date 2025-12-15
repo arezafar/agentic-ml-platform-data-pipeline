@@ -1,0 +1,96 @@
+# QA Test Infrastructure
+# Docker Compose configuration for running integration and load tests
+
+version: "3.8"
+
+services:
+  # PostgreSQL with pgvector for database integration tests
+  postgres-test:
+    image: pgvector/pgvector:pg15
+    container_name: qa-postgres
+    environment:
+      POSTGRES_USER: qa_user
+      POSTGRES_PASSWORD: qa_password
+      POSTGRES_DB: qa_test
+    ports:
+      - "5433:5432" # Use alternate port to avoid conflicts
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+      - ./init-test-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qa_user -d qa_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - qa-network
+
+  # Redis for cache testing
+  redis-test:
+    image: redis:7-alpine
+    container_name: qa-redis
+    ports:
+      - "6380:6379" # Use alternate port to avoid conflicts
+    command: redis-server --maxmemory 100mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - qa-network
+
+  # Mock inference service for load testing
+  mock-inference:
+    build:
+      context: .
+      dockerfile: Dockerfile.mock-inference
+    container_name: qa-mock-inference
+    ports:
+      - "8081:8000"
+    environment:
+      MODEL_LATENCY_MS: "10"
+      ERROR_RATE: "0.001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+    networks:
+      - qa-network
+
+  # Locust master for distributed load testing
+  locust-master:
+    image: locustio/locust:2.15.1
+    container_name: qa-locust-master
+    ports:
+      - "8089:8089" # Locust web UI
+    command: -f /mnt/locustfile.py --master --expect-workers 2
+    volumes:
+      - ./load_tests/locustfile.py:/mnt/locustfile.py:ro
+    environment:
+      TARGET_HOST: http://mock-inference:8000
+    depends_on:
+      - mock-inference
+    networks:
+      - qa-network
+
+  # Locust worker (scale as needed)
+  locust-worker:
+    image: locustio/locust:2.15.1
+    command: -f /mnt/locustfile.py --worker --master-host locust-master
+    volumes:
+      - ./load_tests/locustfile.py:/mnt/locustfile.py:ro
+    depends_on:
+      - locust-master
+    deploy:
+      replicas: 2
+    networks:
+      - qa-network
+
+volumes:
+  postgres_test_data:
+
+networks:
+  qa-network:
+    driver: bridge
