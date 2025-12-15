@@ -1,0 +1,439 @@
+{
+    "name": "agentic_ml_platform",
+    "version": "1.0.0",
+    "description": "Schema for Agentic ML Platform with Raw Data Store, Feature Store, and Model Registry",
+    "extensions": [
+        "uuid-ossp"
+    ],
+    "tables": {
+        "raw_events": {
+            "schema": "raw_data_store",
+            "description": "Raw event data ingested from upstream APIs (Lakehouse pattern)",
+            "columns": {
+                "id": {
+                    "type": "uuid",
+                    "not_null": true,
+                    "default": "gen_random_uuid()"
+                },
+                "source": {
+                    "type": "varchar",
+                    "length": 255,
+                    "not_null": true,
+                    "description": "Source identifier (API name, system)"
+                },
+                "event_type": {
+                    "type": "varchar",
+                    "length": 100,
+                    "not_null": true
+                },
+                "raw_payload": {
+                    "type": "jsonb",
+                    "not_null": true,
+                    "description": "Unaltered JSON payload from source"
+                },
+                "ingested_at": {
+                    "type": "timestamptz",
+                    "not_null": true,
+                    "default": "NOW()"
+                },
+                "processed": {
+                    "type": "boolean",
+                    "not_null": true,
+                    "default": false
+                }
+            },
+            "primary_key": "id",
+            "partitioning": {
+                "type": "RANGE",
+                "columns": [
+                    "ingested_at"
+                ],
+                "default_partition": true,
+                "partitions": []
+            },
+            "indexes": [
+                {
+                    "name": "idx_raw_events_source",
+                    "columns": [
+                        "source"
+                    ]
+                },
+                {
+                    "name": "idx_raw_events_event_type",
+                    "columns": [
+                        "event_type"
+                    ]
+                },
+                {
+                    "name": "idx_raw_events_ingested_at",
+                    "columns": [
+                        "ingested_at"
+                    ]
+                },
+                {
+                    "name": "idx_raw_events_unprocessed",
+                    "columns": [
+                        "processed"
+                    ],
+                    "where": "processed = false"
+                }
+            ]
+        },
+        "entities": {
+            "schema": "feature_store",
+            "description": "Core entity table for feature store",
+            "columns": {
+                "id": {
+                    "type": "uuid",
+                    "not_null": true,
+                    "default": "gen_random_uuid()"
+                },
+                "entity_type": {
+                    "type": "varchar",
+                    "length": 100,
+                    "not_null": true
+                },
+                "external_id": {
+                    "type": "varchar",
+                    "length": 255,
+                    "not_null": true,
+                    "description": "External system identifier"
+                },
+                "created_at": {
+                    "type": "timestamptz",
+                    "not_null": true,
+                    "default": "NOW()"
+                },
+                "updated_at": {
+                    "type": "timestamptz",
+                    "not_null": true,
+                    "default": "NOW()"
+                }
+            },
+            "primary_key": "id",
+            "unique_constraints": [
+                {
+                    "name": "uq_entities_type_external_id",
+                    "columns": [
+                        "entity_type",
+                        "external_id"
+                    ]
+                }
+            ],
+            "indexes": [
+                {
+                    "name": "idx_entities_type",
+                    "columns": [
+                        "entity_type"
+                    ]
+                }
+            ]
+        },
+        "features": {
+            "schema": "feature_store",
+            "description": "Computed features for ML training and inference",
+            "columns": {
+                "id": {
+                    "type": "uuid",
+                    "not_null": true,
+                    "default": "gen_random_uuid()"
+                },
+                "entity_id": {
+                    "type": "uuid",
+                    "not_null": true
+                },
+                "feature_set": {
+                    "type": "varchar",
+                    "length": 100,
+                    "not_null": true,
+                    "description": "Logical grouping of features"
+                },
+                "feature_version": {
+                    "type": "varchar",
+                    "length": 50,
+                    "not_null": true,
+                    "default": "'1.0.0'"
+                },
+                "features": {
+                    "type": "jsonb",
+                    "not_null": true,
+                    "description": "Feature key-value pairs"
+                },
+                "computed_at": {
+                    "type": "timestamptz",
+                    "not_null": true,
+                    "default": "NOW()"
+                },
+                "valid_from": {
+                    "type": "timestamptz",
+                    "not_null": true,
+                    "default": "NOW()"
+                },
+                "valid_to": {
+                    "type": "timestamptz",
+                    "description": "NULL means currently valid"
+                }
+            },
+            "primary_key": "id",
+            "partitioning": {
+                "type": "RANGE",
+                "columns": [
+                    "computed_at"
+                ],
+                "default_partition": true,
+                "partitions": []
+            },
+            "foreign_keys": [
+                {
+                    "name": "fk_features_entity",
+                    "column": "entity_id",
+                    "references": {
+                        "table": "entities",
+                        "column": "id"
+                    },
+                    "on_delete": "CASCADE"
+                }
+            ],
+            "indexes": [
+                {
+                    "name": "idx_features_entity_set",
+                    "columns": [
+                        "entity_id",
+                        "feature_set"
+                    ]
+                },
+                {
+                    "name": "idx_features_computed_at",
+                    "columns": [
+                        "computed_at"
+                    ]
+                }
+            ]
+        },
+        "models": {
+            "schema": "model_registry",
+            "description": "Registered ML models and their metadata",
+            "columns": {
+                "id": {
+                    "type": "uuid",
+                    "not_null": true,
+                    "default": "gen_random_uuid()"
+                },
+                "name": {
+                    "type": "varchar",
+                    "length": 255,
+                    "not_null": true
+                },
+                "version": {
+                    "type": "varchar",
+                    "length": 50,
+                    "not_null": true
+                },
+                "model_type": {
+                    "type": "varchar",
+                    "length": 100,
+                    "not_null": true,
+                    "description": "GBM, RandomForest, DeepLearning, etc."
+                },
+                "framework": {
+                    "type": "varchar",
+                    "length": 50,
+                    "not_null": true,
+                    "default": "'h2o'"
+                },
+                "artifact_path": {
+                    "type": "text",
+                    "not_null": true,
+                    "description": "Path to MOJO file"
+                },
+                "hyperparameters": {
+                    "type": "jsonb",
+                    "description": "Training hyperparameters"
+                },
+                "created_at": {
+                    "type": "timestamptz",
+                    "not_null": true,
+                    "default": "NOW()"
+                },
+                "created_by": {
+                    "type": "varchar",
+                    "length": 255
+                },
+                "status": {
+                    "type": "varchar",
+                    "length": 50,
+                    "not_null": true,
+                    "default": "'registered'"
+                }
+            },
+            "primary_key": "id",
+            "unique_constraints": [
+                {
+                    "name": "uq_models_name_version",
+                    "columns": [
+                        "name",
+                        "version"
+                    ]
+                }
+            ],
+            "check_constraints": [
+                {
+                    "name": "ck_models_status",
+                    "expression": "status IN ('registered', 'staging', 'production', 'archived')"
+                }
+            ],
+            "indexes": [
+                {
+                    "name": "idx_models_name",
+                    "columns": [
+                        "name"
+                    ]
+                },
+                {
+                    "name": "idx_models_status",
+                    "columns": [
+                        "status"
+                    ]
+                }
+            ]
+        },
+        "model_metrics": {
+            "schema": "model_registry",
+            "description": "Performance metrics for registered models",
+            "columns": {
+                "id": {
+                    "type": "uuid",
+                    "not_null": true,
+                    "default": "gen_random_uuid()"
+                },
+                "model_id": {
+                    "type": "uuid",
+                    "not_null": true
+                },
+                "metric_name": {
+                    "type": "varchar",
+                    "length": 100,
+                    "not_null": true
+                },
+                "metric_value": {
+                    "type": "double",
+                    "not_null": true
+                },
+                "dataset_partition": {
+                    "type": "varchar",
+                    "length": 100,
+                    "description": "Training partition ID for lineage"
+                },
+                "evaluated_at": {
+                    "type": "timestamptz",
+                    "not_null": true,
+                    "default": "NOW()"
+                }
+            },
+            "primary_key": "id",
+            "foreign_keys": [
+                {
+                    "name": "fk_model_metrics_model",
+                    "column": "model_id",
+                    "references": {
+                        "table": "models",
+                        "column": "id"
+                    },
+                    "on_delete": "CASCADE"
+                }
+            ],
+            "indexes": [
+                {
+                    "name": "idx_model_metrics_model",
+                    "columns": [
+                        "model_id"
+                    ]
+                },
+                {
+                    "name": "idx_model_metrics_name",
+                    "columns": [
+                        "metric_name"
+                    ]
+                }
+            ]
+        },
+        "predictions": {
+            "schema": "serving",
+            "description": "Prediction logs for feedback loop and drift detection",
+            "columns": {
+                "id": {
+                    "type": "uuid",
+                    "not_null": true,
+                    "default": "gen_random_uuid()"
+                },
+                "model_id": {
+                    "type": "uuid",
+                    "not_null": true
+                },
+                "entity_id": {
+                    "type": "uuid"
+                },
+                "input_features": {
+                    "type": "jsonb",
+                    "not_null": true
+                },
+                "prediction": {
+                    "type": "jsonb",
+                    "not_null": true
+                },
+                "confidence": {
+                    "type": "double"
+                },
+                "predicted_at": {
+                    "type": "timestamptz",
+                    "not_null": true,
+                    "default": "NOW()"
+                },
+                "response_time_ms": {
+                    "type": "integer"
+                }
+            },
+            "primary_key": "id",
+            "partitioning": {
+                "type": "RANGE",
+                "columns": [
+                    "predicted_at"
+                ],
+                "default_partition": true,
+                "partitions": []
+            },
+            "foreign_keys": [
+                {
+                    "name": "fk_predictions_model",
+                    "column": "model_id",
+                    "references": {
+                        "table": "models",
+                        "column": "id"
+                    },
+                    "on_delete": "SET NULL"
+                }
+            ],
+            "indexes": [
+                {
+                    "name": "idx_predictions_model",
+                    "columns": [
+                        "model_id"
+                    ]
+                },
+                {
+                    "name": "idx_predictions_entity",
+                    "columns": [
+                        "entity_id"
+                    ],
+                    "where": "entity_id IS NOT NULL"
+                },
+                {
+                    "name": "idx_predictions_predicted_at",
+                    "columns": [
+                        "predicted_at"
+                    ]
+                }
+            ]
+        }
+    }
+}

@@ -1,0 +1,79 @@
+# =============================================================================
+# Mage io_config.yaml Template
+# =============================================================================
+#
+# This configuration file defines connections and credentials for Mage blocks.
+# All sensitive values are sourced from environment variables via .env file.
+#
+# Usage:
+#   1. Copy this to your Mage project directory
+#   2. Ensure .env file contains the required variables
+#   3. Reference profiles in blocks: @data_loader with profile 'default'
+#
+# =============================================================================
+
+version: 0.1.1
+
+default:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL Connection (Data Warehouse / Feature Store)
+  # ---------------------------------------------------------------------------
+  POSTGRES_CONNECT: "{{ env_var('POSTGRES_CONNECT') }}"
+  POSTGRES_DBNAME: "{{ env_var('POSTGRES_DBNAME') }}"
+  POSTGRES_USER: "{{ env_var('POSTGRES_USER') }}"
+  POSTGRES_PASSWORD: "{{ env_var('POSTGRES_PASSWORD') }}"
+  POSTGRES_HOST: "{{ env_var('POSTGRES_HOST') }}"
+  POSTGRES_PORT: "{{ env_var('POSTGRES_PORT') }}"
+  POSTGRES_SCHEMA: "{{ env_var('POSTGRES_SCHEMA') }}"
+
+  # ---------------------------------------------------------------------------
+  # H2O Connection (ML Cluster)
+  # ---------------------------------------------------------------------------
+  H2O_URL: "{{ env_var('H2O_URL') }}"
+  H2O_CLUSTER_NAME: "{{ env_var('H2O_CLUSTER_NAME') }}"
+
+  # ---------------------------------------------------------------------------
+  # Object Storage (S3/GCS)
+  # ---------------------------------------------------------------------------
+  AWS_ACCESS_KEY_ID: "{{ env_var('AWS_ACCESS_KEY_ID') }}"
+  AWS_SECRET_ACCESS_KEY: "{{ env_var('AWS_SECRET_ACCESS_KEY') }}"
+  AWS_REGION: "{{ env_var('AWS_REGION') }}"
+  AWS_S3_BUCKET: "{{ env_var('AWS_S3_BUCKET') }}"
+
+  # ---------------------------------------------------------------------------
+  # Kafka (Streaming Ingestion)
+  # ---------------------------------------------------------------------------
+  KAFKA_BOOTSTRAP_SERVERS: "{{ env_var('KAFKA_BOOTSTRAP_SERVERS') }}"
+  KAFKA_CONSUMER_GROUP: "{{ env_var('KAFKA_CONSUMER_GROUP') }}"
+
+  # ---------------------------------------------------------------------------
+  # External APIs
+  # ---------------------------------------------------------------------------
+  API_BASE_URL: "{{ env_var('API_BASE_URL') }}"
+  API_TOKEN: "{{ env_var('API_TOKEN') }}"
+
+  # ---------------------------------------------------------------------------
+  # Alerting
+  # ---------------------------------------------------------------------------
+  SLACK_WEBHOOK_URL: "{{ env_var('SLACK_WEBHOOK_URL') }}"
+  EMAIL_SMTP_HOST: "{{ env_var('EMAIL_SMTP_HOST') }}"
+  EMAIL_FROM: "{{ env_var('EMAIL_FROM') }}"
+
+# Production profile with stricter settings
+production:
+  POSTGRES_CONNECT: "{{ env_var('PROD_POSTGRES_CONNECT') }}"
+  POSTGRES_DBNAME: "{{ env_var('PROD_POSTGRES_DBNAME') }}"
+  POSTGRES_USER: "{{ env_var('PROD_POSTGRES_USER') }}"
+  POSTGRES_PASSWORD: "{{ env_var('PROD_POSTGRES_PASSWORD') }}"
+  POSTGRES_HOST: "{{ env_var('PROD_POSTGRES_HOST') }}"
+  POSTGRES_PORT: "{{ env_var('PROD_POSTGRES_PORT') }}"
+  H2O_URL: "{{ env_var('PROD_H2O_URL') }}"
+
+# Development profile for local testing
+development:
+  POSTGRES_HOST: localhost
+  POSTGRES_PORT: 5432
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: postgres
+  POSTGRES_DBNAME: agentic_ml_dev
+  H2O_URL: "http://localhost:54321"
